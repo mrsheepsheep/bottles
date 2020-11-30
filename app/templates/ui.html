@@ -65,9 +65,51 @@
                                     label="Content"
                                     v-model="bottle.content"
                                 ></v-textarea>
-                                <v-simple-table>
-                                    
-                                </v-simple-table>
+                                <v-data-table class="elevation-3" elevation="2" :headers="bottle_headers_table" :items="bottle.headers">
+                                    <template v-slot:top>
+                                        <v-toolbar flat dense>
+                                            <v-toolbar-title>Response headers</v-toolbar-title>
+                                            <v-spacer></v-spacer>
+                                            <v-dialog v-model="editDialog" max-width="500px">
+                                                <template v-slot:activator="{on, attrs}">
+                                                    <v-btn v-bind="attrs" v-on="on">Add header</v-btn>
+                                                </template>
+                                                <v-card>
+                                                    <v-card-title>
+                                                        <span class="headline">
+                                                            [[ editedHeaderIndex > -1 ? 'Edit header' : 'Add a new header' ]]
+                                                        </span>
+                                                    </v-card-title>
+                                                    <v-card-text>
+                                                        <v-text-field outlined label="Name" v-model="editedHeader.name"></v-text-field>
+                                                        <v-textarea outlined label="Value" v-model="editedHeader.value"></v-textarea>
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn @click="closeEditHeaders">Cancel</v-btn>
+                                                        <v-btn @click="saveHeader">
+                                                            [[ editedHeaderIndex > -1 ? 'Edit' : 'Add' ]]
+                                                        </v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-dialog>
+                                        </v-toolbar>
+                                    </template>
+                                    <template v-slot:item.actions="{ item }">
+                                        <v-icon
+                                          small
+                                          class="mr-2"
+                                          @click="editHeader(item)"
+                                        >
+                                          mdi-pencil
+                                        </v-icon>
+                                        <v-icon
+                                          small
+                                          @click="deleteHeader(item)"
+                                        >
+                                          mdi-delete
+                                        </v-icon>
+                                      </template>
+                                </v-data-table>
                             </v-card-text>
                             <v-card-actions>
                                 <v-btn block @click="updateBottle">Update bottle</v-btn>
@@ -143,7 +185,8 @@
                                                     ></v-text-field>
                                                 </v-col>
                                             </v-row>
-                                                                                
+                                        
+                                            <h3>Request parameters</h3>
                                             <v-text-field
                                                 readonly
                                                 label="Path"
@@ -159,13 +202,30 @@
                                                 label="Path parameters"
                                                 v-model="message.bottle.query_string"
                                             ></v-text-field>
-                                            <v-expansion-panel>
-                                                <v-expansion-panel-header>Headers</v-expansion-panel-header>
-                                                <v-expansion-panel-content>
-                                                    [[ message.bottle.headers ]]
-                                                </v-expansion-panel-content>
-                                            </v-expansion-panel>
-                                        </v-expansion-panel-content>
+                                            <h3>Request headers</h3>
+                                            <v-simple-table>
+                                                <template v-slot:default>
+                                                  <thead>
+                                                    <tr>
+                                                      <th class="text-left">
+                                                        Name
+                                                      </th>
+                                                      <th class="text-left">
+                                                        Value
+                                                      </th>
+                                                    </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                    <tr
+                                                      v-for="header in message.bottle.headers"
+                                                      :key="header.name"
+                                                    >
+                                                      <td>[[header.name]]</td>
+                                                      <td>[[header.value]]</td>
+                                                    </tr>
+                                                  </tbody>
+                                                </template>
+                                              </v-simple-table>
                                     </v-expansion-panel>
                                 </v-expansion-panels>
                             </v-card-text>
@@ -213,6 +273,36 @@
                 snackbarMessage: null,
                 bottles: [],
                 newBottleId: null,
+                bottle_headers_table: [
+                    {
+                        text: 'Header name',
+                        align: 'start',
+                        sortable: false,
+                        value: 'name'
+                    },
+                    {
+                        text: 'Header value',
+                        align: 'start',
+                        sortable: false,
+                        value: 'value'
+                    },
+                    {
+                        text: 'Actions',
+                        align: 'end',
+                        sortable: false,
+                        value: 'actions'
+                    }
+                ],
+                editedHeaderIndex: -1,
+                editedHeader: {
+                    name: 'Example header',
+                    value: ''
+                },
+                defaultHeader: {
+                    name: 'Example header',
+                    value: ''
+                },
+                editDialog: false
             }
         },
         created: function() {
@@ -224,6 +314,9 @@
         computed: {
         },
         watch: {
+            editDialog(val) {
+                val || this.closeEditHeaders()
+            }
         },
         methods: {
             error(error) {
@@ -310,6 +403,30 @@
                 axios.get('/get/').then(response => {
                     this.bottles = response.data
                 })
+            },
+            editHeader(header) {
+                this.editedHeaderIndex = this.bottle.headers.indexOf(header)
+                this.editedHeader = Object.assign({}, header)
+                this.editDialog = true
+            },
+            saveHeader() {
+                if (this.editedHeaderIndex > -1) {
+                    Object.assign(this.bottle.headers[this.editedHeaderIndex], this.editedHeader)
+                } else {
+                    this.bottle.headers.push(this.editedHeader)
+                }
+                this.closeEditHeaders()
+            },
+            closeEditHeaders() {
+                this.editDialog = false
+                this.$nextTick(() => {
+                    this.editedHeader = Object.assign({}, this.defaultHeader)
+                    this.editedHeaderIndex =-1
+                })
+            },
+            deleteHeader(header) {
+                const index = this.bottle.headers.indexOf(header)
+                this.bottle.headers.splice(index, 1)
             }
         }
     })
