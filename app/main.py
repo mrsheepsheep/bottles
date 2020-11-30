@@ -14,16 +14,19 @@ templates = Jinja2Templates(directory="templates")
 
 app = FastAPI()
 
+# Class for managing HTTP headers
 class Header(BaseModel):
 	name: str
 	value: str
 
+# Base class for a Bottle
 class Bottle(BaseModel):
 	content: str = 'Hello world'
 	status_code: int = 200
 	headers: typing.List[Header] = []
 	media_type: str = 'text/html'
 
+# Manages Websockets
 class BottleWebsocketManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -44,15 +47,15 @@ bottles = {}
 # Websocket managers
 managers = {}
 
+# Update bottle parameters
 @app.post("/set/{id}")
 async def set_bottle(id: str, bottle: Bottle):
 	if id in bottles:
-		bottles[id] = bottle
-		# await managers[id].broadcast(json.dumps({ 'eventType': 'update' }))
-		return bottle
+		return bottles[id]
 	else:
 		return JSONResponse(status_code=400, content={"error": "Bottle does not exist."}) 
 
+# Creates a new bottle with default parameters
 @app.post("/new/{id}")
 async def new_bottle(id: str):
 	bottles[id] = Bottle()
@@ -63,6 +66,7 @@ async def new_bottle(id: str):
 	managers[id] = manager
 	return bottles[id]
 
+# Returns all existing bottles
 @app.get("/get")
 def all_bottles():
 	return bottles
@@ -74,27 +78,35 @@ def info_bottle(id: str):
 		return bottles[id]
 	return None
 
+# UI Index
 @app.get("/ui/")
 async def bottle_ui_index(request: Request):
 	return templates.TemplateResponse("ui.html", {"request": request, "bottle_id": ''})
 
+# UI for a specific bottle
 @app.get("/ui/{id}", response_class=HTMLResponse)
 async def bottle_ui(id: str, request: Request):
 	print()
 	return templates.TemplateResponse("ui.html", {"request": request, "bottle_id": id})
 
+# Opens a websocket dedicated to a bottle
 @app.websocket("/ws/{id}")
 async def websocket_bottle(websocket: WebSocket, id: str):
+	# Check manager already exists
 	if id in managers:
 		manager = managers[id]
+		# Connect to manager
 		await manager.connect(websocket)
 		try:
+			# Main loop
 			while True:
 				update = await websocket.receive_text() # Wait for bottle update from client
 				await manager.broadcast(json.dumps({ 'eventType': 'update' })) # Ask all clients to update their bottle
 		except Exception as e:
 			manager.disconnect(websocket)
 
+# Transforms request properties into a usable dict
+# There's probably a better way to do this
 def get_interesting_data(request: Request):
 	data = {}
 	request = dict(request)
