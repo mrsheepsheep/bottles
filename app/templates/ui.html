@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <title>🍾 {{ bottle_id }} bottle (0)</title>
+</head>
+<body>
+  <div id="app">
+    <v-app>
+        <v-navigation-drawer app permanent>
+            <v-list-item>
+                <v-list-item-content>
+                    <v-list-item-title class="title">
+                    Bottles !
+                    </v-list-item-title>
+                </v-list-item-content>
+            </v-list-item>
+            <v-divider></v-divider>
+            <v-list-item>
+                <v-list-item-content>
+                    <v-text-field label="New bottle name" v-model="newBottleId"></v-text-field>
+                    <v-btn block :disabled="!newBottleId" :href="`/ui/${newBottleId}`">Create new bottle</v-btn>
+                </v-list-item-content>
+            </v-list-item>
+            <v-divider></v-divider>
+            <v-list
+                nav
+                flat
+            >
+                <v-list-item-group>
+                    <v-list-item
+                    v-for="(bottle, id) in bottles"
+                    :key="id"
+                    link
+                    :href="`/ui/${id}`"
+                    active
+                    >
+                        <v-list-item-content>
+                            <v-list-item-title>[[ id ]]</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list-item-group>
+            </v-list>
+        </v-navigation-drawer>
+        <v-main>
+            <v-container v-if="bottle_id">
+                <v-row>
+                    <v-col md="6" sm="12">
+                        <v-card elevation="2">
+                            <v-card-title>Bottle parameters</v-card-title>
+                            <v-card-text>
+                                <v-row>
+                                    <v-col sm="6" class="pb-0">
+                                        <v-text-field outlined v-model="bottle.media_type" type="text" label="MIME Type"></v-text-field>
+                                    </v-col>
+                                    <v-col sm="6" class="pb-0">
+                                        <v-text-field outlined v-model="bottle.status_code" type="number" label="Status Code"></v-text-field>
+                                    </v-col>
+                                </v-row>
+                                <v-textarea
+                                    outlined
+                                    label="Content"
+                                    v-model="bottle.content"
+                                ></v-textarea>
+                                <v-simple-table>
+                                    
+                                </v-simple-table>
+                            </v-card-text>
+                            <v-card-actions>
+                                <v-btn block @click="updateBottle">Update bottle</v-btn>
+                            </v-card-actions>
+                        </v-card>
+                    </v-col>
+                    <v-col md="6" sm="12">
+                        <v-card elevation="2">
+                            <v-card-title>Bottle receiver</v-card-title>
+                            <v-card-text v-if="messages.length">
+                                <v-expansion-panels>
+                                    <v-expansion-panel
+                                        v-for="(message, index) in messages"
+                                        :key="index"
+                                    >
+                                        <v-expansion-panel-header v-slot="{ open }">
+                                            <v-row no-gutters>
+                                                <v-col cols="4">
+                                                    🍾 [[ message.bottle.client ]]
+                                                </v-col>
+                                                <v-col
+                                                    cols="8"
+                                                    class="text--secondary"
+                                                >
+                                                    <v-fade-transition>
+                                                    <v-row
+                                                        v-if="!open"
+                                                        no-gutters
+                                                        style="width: 100%"
+                                                    >
+                                                        <v-col cols="8">
+                                                            [[ message.date ]]
+                                                        </v-col>
+                                                        <v-col cols="4">
+                                                            [[ message.bottle.method ]]
+                                                        </v-col>
+                                                    </v-row>
+                                                    <v-row
+                                                        v-else
+                                                        no-gutters
+                                                        style="width: 100%"
+                                                    >
+                                                        <v-col cols="12">
+                                                            [[ message.date ]]
+                                                        </v-col>
+                                                    </v-row>
+                                                    </v-fade-transition>
+                                                </v-col>
+                                            </v-row>
+                                        </v-expansion-panel-header>
+                                        
+                                        <v-expansion-panel-content>
+                                            <v-row>
+                                                <v-col cols="4">
+                                                    <v-text-field
+                                                        readonly
+                                                        label="Type"
+                                                        v-model="message.bottle.type"
+                                                    ></v-text-field>
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    <v-text-field
+                                                        readonly
+                                                        label="HTTP Version"
+                                                        v-model="message.bottle.http_version"
+                                                    ></v-text-field>
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    <v-text-field
+                                                        readonly
+                                                        label="Method"
+                                                        v-model="message.bottle.method"
+                                                    ></v-text-field>
+                                                </v-col>
+                                            </v-row>
+                                                                                
+                                            <v-text-field
+                                                readonly
+                                                label="Path"
+                                                v-model="message.bottle.path"
+                                            ></v-text-field>
+                                            <v-text-field
+                                                readonly
+                                                label="Query string"
+                                                v-model="message.bottle.query_string"
+                                            ></v-text-field>
+                                            <v-text-field
+                                                readonly
+                                                label="Path parameters"
+                                                v-model="message.bottle.query_string"
+                                            ></v-text-field>
+                                            <v-expansion-panel>
+                                                <v-expansion-panel-header>Headers</v-expansion-panel-header>
+                                                <v-expansion-panel-content>
+                                                    [[ message.bottle.headers ]]
+                                                </v-expansion-panel-content>
+                                            </v-expansion-panel>
+                                        </v-expansion-panel-content>
+                                    </v-expansion-panel>
+                                </v-expansion-panels>
+                            </v-card-text>
+                            <v-card-text v-else>
+                                No bottle received yet...
+                            </v-card-text>
+                            <v-card-actions>
+                                <v-btn @click="sendBottle">Send a test bottle</v-btn>
+                                <v-btn link target="_blank" :href="`/bottle/${bottle_id}`">Try it yourself</v-btn>
+                            </v-card-actions>
+                        </v-card>
+                    </v-col>
+                </v-row>
+            </v-container>
+            <v-container v-else>
+                <v-row>
+                    <v-col cols="4" offset="4">
+                        Create or select a bottle from the navigation menu.
+                    </v-col>
+                </v-row>
+            </v-container>
+            <v-snackbar v-model="snackbar" :color="snackbarColor">[[ snackbarMessage ]]</v-snackbar>
+        </v-main>
+    </v-app>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    new Vue({
+        el: '#app',
+        vuetify: new Vuetify({
+            theme: { dark: true }
+        }),
+        delimiters: ['[[',']]'],
+        data: function(){
+            return {
+                connection: null,
+                bottle_id: '{{ bottle_id }}',
+                bottle: {},
+                messages: [],
+                snackbar: false,
+                snackbarColor: "error",
+                snackbarMessage: null,
+                bottles: [],
+                newBottleId: null,
+            }
+        },
+        created: function() {
+            if (this.bottle_id !== ''){
+                this.getBottle()
+            }
+        this.getAllBottles()
+        },
+        computed: {
+        },
+        watch: {
+        },
+        methods: {
+            error(error) {
+                this.snackbarMessage = error
+                this.snackbarColor = "error"
+                this.snackbar = true
+            },
+            success(message) {
+                this.snackbarMessage = message
+                this.snackbarColor = "success"
+                this.snackbar = true
+            },
+            info(message) {
+                this.snackbarMessage = message
+                this.snackbarColor = "info"
+                this.snackbar = true
+            },
+            getBottle() {
+                return axios.get("/get/{{bottle_id}}").then(response => {
+                    if (response.data != null) {
+                        if (JSON.stringify(this.bottle) != JSON.stringify(response.data)) {
+                            this.bottle = response.data
+                        }
+                        if (this.connection === null){
+                            this.connectToWS()
+                        }
+                    } else {
+                        this.createBottle()
+                    }
+                })
+                .catch(this.error)
+            },
+            updateBottle() {
+                return axios.post("/set/{{bottle_id}}", this.bottle).then(response => {
+                    if (this.connection) {
+                        this.connection.send(JSON.stringify({eventType: 'update'}))
+                    }
+                })
+                .catch(this.error)
+            },
+            createBottle() {
+                return axios.post("/new/{{bottle_id}}", { bottle_id: '{{bottle_id}}'}).then(response => {
+                    this.getBottle()
+                    this.success('A new bottle was created.')
+                })
+                .catch(this.error)
+            },
+            connectToWS() {
+                connection = new WebSocket(`ws://${location.host}/ws/{{bottle_id}}`)
+                connection.onopen = (event) => {
+                    this.connection = connection
+                }
+                connection.onmessage = (event) => {
+                    data = JSON.parse(event.data)
+                    if (data.eventType === 'bottle') {
+                        this.receiveBottle(data.bottle)
+                    } else if (data.eventType === 'update') {
+                        this.getBottle();
+                        this.info('The bottle was updated.')
+                    } else if (data.eventType === 'new') {
+                        this.getAllBottles();
+                        this.info(`A new bottle "${data.bottle_id}" was created.`)
+                    }
+                }
+            },
+            receiveBottle(bottle) {
+                const now = new Date()
+                const offsetMs = now.getTimezoneOffset() * 60 * 1000
+                const dateLocal = new Date(now.getTime() - offsetMs)
+                const datestr = dateLocal.toISOString().slice(0, 19).replace(/-/g, "/").replace("T", " ")
+                this.messages.push(
+                    {
+                        date: datestr,
+                        bottle: bottle
+                    }
+                )
+                this.info('You received a new bottle !')
+                document.title = `🍾 {{ bottle_id }} bottle (${this.messages.length})`
+            },
+            sendBottle() {
+                axios.get('/bottle/{{bottle_id}}')
+            },
+            getAllBottles() {
+                axios.get('/get/').then(response => {
+                    this.bottles = response.data
+                })
+            }
+        }
+    })
+  </script>
+</body>
+</html>
