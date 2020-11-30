@@ -1,6 +1,12 @@
 {
     "name": "Bottles",
     "description": "An HTTP endpoint receiver",
-    "repository": "https://github.com/mrsheepsheep/bottles"
+    "repository": "https://github.com/mrsheepsheep/bottles",
+    "stack": "container",
+    "formation": {
+        "web": {
+            "quantity": 1
+        }
+    }
   }
   
