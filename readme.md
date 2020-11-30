@@ -19,4 +19,5 @@ ToDo :
 * Authentication with environment secret
 
 If deploying on Heroku, use the http protocol as no SSL proxy is provided with this app.
+
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/mrsheepsheep/bottles/tree/heroku-one-click)
