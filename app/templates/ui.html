@@ -324,18 +324,18 @@
         delimiters: ['[[',']]'],
         data: function(){
             return {
-                tab: null,
-                connection: null,
-                bottle_id: '{{ bottle_id }}',
-                bottle: {},
-                updateRequired: false,
-                messages: [],
-                snackbar: false,
-                snackbarColor: "error",
+                tab: null, // Current opened tab
+                connection: null, // Websocket connection
+                bottle_id: '{{ bottle_id }}', // Current bottle id
+                bottle: {}, // Bottle data
+                updateRequired: false, // Can we send an update ?
+                messages: [], // Websocket messages for mailbox
+                snackbar: false, // Toggle snackbar
+                snackbarColor: "error", 
                 snackbarMessage: null,
-                bottles: [],
-                newBottleId: null,
-                bottle_headers_table: [
+                bottles: [], // Known bottles objects
+                newBottleId: null, // New bottle id in textfield
+                bottle_headers_table: [ // Header table headers
                     {
                         text: 'Header name',
                         align: 'start',
@@ -355,30 +355,30 @@
                         value: 'actions'
                     }
                 ],
-                editedHeaderIndex: -1,
-                editedHeader: {
+                editedHeaderIndex: -1, // Currently edited header index
+                editedHeader: { // Currently edited header data will be put here
                     name: 'Example header',
                     value: ''
                 },
-                defaultHeader: {
+                defaultHeader: { // Default values for a new header
                     name: 'Example header',
                     value: ''
                 },
-                editDialog: false
+                editDialog: false // Toggle dialog
             }
         },
+        // When app is created
         created: function() {
+            // If we're not on the UI index, retrieve bottle data
             if (this.bottle_id !== ''){
                 this.getBottle()
             }
-        this.getAllBottles()
+            this.getAllBottles()
         },
         computed: {
         },
         watch: {
-            editDialog(val) {
-                val || this.closeEditHeaders()
-            },
+            // If we changed settings, enable the update button
             bottle: {
                 handler(oldBottle, newBottle){
                     this.updateRequired = true
@@ -387,21 +387,25 @@
             }
         },
         methods: {
+            // Show error snackbar
             error(error) {
                 this.snackbarMessage = error
                 this.snackbarColor = "error"
                 this.snackbar = true
             },
+            // Show success snackbar
             success(message) {
                 this.snackbarMessage = message
                 this.snackbarColor = "success"
                 this.snackbar = true
             },
+            // Show info snackbar
             info(message) {
                 this.snackbarMessage = message
                 this.snackbarColor = "info"
                 this.snackbar = true
             },
+            // Retrieves current bottle settings
             getBottle() {
                 return axios.get("/get/{{bottle_id}}").then(response => {
                     if (response.data != null) {
@@ -417,6 +421,7 @@
                 })
                 .catch(this.error)
             },
+            // Updates current bottle settings
             updateBottle() {
                 return axios.post("/set/{{bottle_id}}", this.bottle).then(response => {
                     if (this.connection) {
@@ -426,6 +431,7 @@
                 })
                 .catch(this.error)
             },
+            // Creates a new bottle
             createBottle() {
                 return axios.post("/new/{{bottle_id}}", { bottle_id: '{{bottle_id}}'}).then(response => {
                     this.getBottle()
@@ -434,6 +440,7 @@
                 })
                 .catch(this.error)
             },
+            // Connectes to the Websocket dedicated to this bottle
             connectToWS() {
                 connection = new WebSocket(`ws://${location.host}/ws/{{bottle_id}}`)
                 connection.onopen = (event) => {
@@ -452,6 +459,7 @@
                     }
                 }
             },
+            // When a bottle has been opened via /bottle/<id>
             receiveBottle(bottle) {
                 const now = new Date()
                 const offsetMs = now.getTimezoneOffset() * 60 * 1000
@@ -466,14 +474,17 @@
                 this.info('You received a new bottle !')
                 document.title = `🍾 {{ bottle_id }} bottle (${this.messages.length})`
             },
+            // Open a bottle for testing
             sendBottle() {
                 axios.get('/bottle/{{bottle_id}}')
             },
+            // Retrieves all bottles 
             getAllBottles() {
                 axios.get('/get/').then(response => {
                     this.bottles = response.data
                 })
             },
+            /* Following is used for the "Response headers" table */
             editHeader(header) {
                 this.editedHeaderIndex = this.bottle.headers.indexOf(header)
                 this.editedHeader = Object.assign({}, header)
