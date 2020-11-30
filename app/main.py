@@ -14,13 +14,15 @@ templates = Jinja2Templates(directory="templates")
 
 app = FastAPI()
 
-# Bottle model
+class Header(BaseModel):
+	name: str
+	value: str
+
 class Bottle(BaseModel):
 	content: str = 'Hello world'
 	status_code: int = 200
-	headers: typing.Optional[typing.Dict[str, str]]
+	headers: typing.List[Header] = []
 	media_type: str = 'text/html'
-
 
 class BottleWebsocketManager:
     def __init__(self):
@@ -96,7 +98,6 @@ async def websocket_bottle(websocket: WebSocket, id: str):
 def get_interesting_data(request: Request):
 	data = {}
 	request = dict(request)
-	print(request)
 	data['type'] = request['type']
 	data['http_version'] = request['http_version']
 	data['server'] = request['server']
@@ -106,20 +107,29 @@ def get_interesting_data(request: Request):
 	data['query_string'] = request['query_string'].decode()
 
 	# Headers
-	data['headers'] = {}
+	data['headers'] = []
 	for header in request['headers']:
-		data['headers'][header[0].decode()] = header[1].decode()
+		data['headers'].append({
+			'name': header[0].decode(),
+			'value': header[1].decode()
+		})
 	data['path_params'] = request['path_params']
 
 	return data
 
-# Returns a bottle
-@app.get("/bottle/{id}")
-@app.post("/bottle/{id}")
+# Actually the bottle endpoint
+@app.get("/bottle/{id}", response_model=Bottle)
+@app.post("/bottle/{id}", response_model=Bottle)
 async def bottle(id: str, request: Request):
 	if id in bottles:
 		bottle = bottles[id]
+		# Send websocket notification to all connected clients on this bottle
 		await managers[id].broadcast(json.dumps({ 'eventType': 'bottle', 'bottle': get_interesting_data(request) }))
-		response = Response(content=bottle.content, status_code=bottle.status_code, headers=bottle.headers, media_type=bottle.media_type)
+		# Build proper headers from Headers model
+		headers = {}
+		for header in bottle.headers:
+			headers[header.name] = header.value
+		# Build response
+		response = Response(content=bottle.content, status_code=bottle.status_code, headers=headers, media_type=bottle.media_type)
 		return response
 	return
