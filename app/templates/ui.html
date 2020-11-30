@@ -4,6 +4,11 @@
   <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <title>🍾 {{ bottle_id }} bottle (0)</title>
 </head>
@@ -46,33 +51,77 @@
             </v-list>
         </v-navigation-drawer>
         <v-main>
-            <v-container v-if="bottle_id">
-                <v-row>
-                    <v-col md="6" sm="12">
-                        <v-card elevation="2">
-                            <v-card-title>Bottle parameters</v-card-title>
-                            <v-card-text>
+            <v-toolbar flat>
+                <v-toolbar-title>Bottle viewer - [[ bottle_id ]]</v-toolbar-title>
+                <template v-slot:extension>
+                    <v-tabs v-model="tab">
+                        <v-tab>Parameters</v-tab>
+                        <v-tab>Mailbox ([[ messages.length ]])</v-tab>
+                    </v-tabs>
+                </template>
+            </v-toolbar>
+            <v-tabs-items v-model="tab" v-if="bottle_id">
+                <!-- Parameters -->
+                <v-tab-item>
+                    <v-container>
+                        <v-row>
+                            <v-col>
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" color="success" @click="updateBottle" :disabled="!updateRequired">Update</v-btn>
+                                    </template>
+                                    <span>Saves the bottle settings</span>
+                                </v-tooltip>           
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+                                      <v-btn v-bind="attrs" v-on="on" color="primary" target="_blank" :href="`/bottle/${bottle_id}`">Test</v-btn>
+                                    </template>
+                                    <span>This will send a GET request from your browser</span>
+                                </v-tooltip>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col md="6" sm="12">
                                 <v-row>
                                     <v-col sm="6" class="pb-0">
-                                        <v-text-field outlined v-model="bottle.media_type" type="text" label="MIME Type"></v-text-field>
+                                        <v-tooltip top>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-bind="attrs" v-on="on" outlined v-model="bottle.media_type" type="text" label="MIME Type"></v-text-field>
+                                            </template>
+                                            <span>Equivalent to the "Content-Type" header. Usually <code>text/html</code> or <code>application/json</code></span>
+                                        </v-tooltip>
                                     </v-col>
                                     <v-col sm="6" class="pb-0">
-                                        <v-text-field outlined v-model="bottle.status_code" type="number" label="Status Code"></v-text-field>
+                                        <v-tooltip top>
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-text-field v-bind="attrs" v-on="on" outlined v-model="bottle.status_code" type="number" label="Status Code"></v-text-field>
+                                            </template>
+                                            <span>HTTP Status code. <code>418</code> is a weird one.</span>
+                                        </v-tooltip>
                                     </v-col>
                                 </v-row>
-                                <v-textarea
-                                    outlined
-                                    label="Content"
-                                    v-model="bottle.content"
-                                ></v-textarea>
-                                <v-data-table class="elevation-3" elevation="2" :headers="bottle_headers_table" :items="bottle.headers">
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-textarea
+                                            v-bind="attrs" v-on="on"
+                                            outlined
+                                            label="Content"
+                                            v-model="bottle.content"
+                                        ></v-textarea>
+                                    </template>
+                                    <span>Content usually depends on the MIME Type.</span>
+
+                                </v-tooltip>
+                            </v-col>
+                            <v-col md="6" sm="12">
+                                <v-data-table :headers="bottle_headers_table" :items="bottle.headers">
                                     <template v-slot:top>
-                                        <v-toolbar flat dense>
+                                        <v-toolbar flat dense color="transparent">
                                             <v-toolbar-title>Response headers</v-toolbar-title>
                                             <v-spacer></v-spacer>
                                             <v-dialog v-model="editDialog" max-width="500px">
                                                 <template v-slot:activator="{on, attrs}">
-                                                    <v-btn v-bind="attrs" v-on="on">Add header</v-btn>
+                                                    <v-btn color="primary" v-bind="attrs" v-on="on">Add header</v-btn>
                                                 </template>
                                                 <v-card>
                                                     <v-card-title>
@@ -86,7 +135,7 @@
                                                     </v-card-text>
                                                     <v-card-actions>
                                                         <v-btn @click="closeEditHeaders">Cancel</v-btn>
-                                                        <v-btn @click="saveHeader">
+                                                        <v-btn @click="saveHeader" color="success">
                                                             [[ editedHeaderIndex > -1 ? 'Edit' : 'Add' ]]
                                                         </v-btn>
                                                     </v-card-actions>
@@ -96,36 +145,48 @@
                                     </template>
                                     <template v-slot:item.actions="{ item }">
                                         <v-icon
-                                          small
-                                          class="mr-2"
-                                          @click="editHeader(item)"
+                                            small
+                                            class="mr-2"
+                                            @click="editHeader(item)"
                                         >
-                                          mdi-pencil
+                                            mdi-pencil
                                         </v-icon>
                                         <v-icon
-                                          small
-                                          @click="deleteHeader(item)"
+                                            small
+                                            @click="deleteHeader(item)"
                                         >
-                                          mdi-delete
+                                            mdi-delete
                                         </v-icon>
-                                      </template>
+                                        </template>
                                 </v-data-table>
-                            </v-card-text>
-                            <v-card-actions>
-                                <v-btn block @click="updateBottle">Update bottle</v-btn>
-                            </v-card-actions>
-                        </v-card>
-                    </v-col>
-                    <v-col md="6" sm="12">
-                        <v-card elevation="2">
-                            <v-card-title>Bottle receiver</v-card-title>
-                            <v-card-text v-if="messages.length">
-                                <v-expansion-panels>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-tab-item>
+                <!-- Mailbox -->
+                <v-tab-item>
+                    <v-container>
+                        <v-row>
+                            <v-col>
+                                <v-btn color="primary" @click="sendBottle">Send a test bottle</v-btn>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col>
+                                <v-alert color="secondary" icon="mdi-alert">
+                                    Bottles are sent to trash once you refresh the page.
+                                </v-alert>
+                            </v-col>
+                        </v-row>
+
+                        <v-row>
+                            <v-col sm="12">
+                                <v-expansion-panels v-if="messages.length">
                                     <v-expansion-panel
                                         v-for="(message, index) in messages"
                                         :key="index"
                                     >
-                                        <v-expansion-panel-header v-slot="{ open }">
+                                        <v-expansion-panel-header v-slot="{ open }" color="secondary">
                                             <v-row no-gutters>
                                                 <v-col cols="4">
                                                     🍾 [[ message.bottle.client ]]
@@ -160,86 +221,89 @@
                                                 </v-col>
                                             </v-row>
                                         </v-expansion-panel-header>
-                                        
                                         <v-expansion-panel-content>
                                             <v-row>
-                                                <v-col cols="4">
+                                                <v-col lg="6">
+                                                    <v-row>
+                                                        <v-col cols="4">
+                                                            <v-text-field
+                                                                readonly
+                                                                label="Type"
+                                                                v-model="message.bottle.type"
+                                                            ></v-text-field>
+                                                        </v-col>
+                                                        <v-col cols="4">
+                                                            <v-text-field
+                                                                readonly
+                                                                label="HTTP Version"
+                                                                v-model="message.bottle.http_version"
+                                                            ></v-text-field>
+                                                        </v-col>
+                                                        <v-col cols="4">
+                                                            <v-text-field
+                                                                readonly
+                                                                label="Method"
+                                                                v-model="message.bottle.method"
+                                                            ></v-text-field>
+                                                        </v-col>
+                                                    </v-row>
+                                                    <v-row>
+                                                        <v-col>
+
+                                                        </v-col>
+                                                    </v-row>
+                                                    <h3>Request parameters</h3>
                                                     <v-text-field
                                                         readonly
-                                                        label="Type"
-                                                        v-model="message.bottle.type"
+                                                        label="Path"
+                                                        v-model="message.bottle.path"
+                                                    ></v-text-field>
+                                                    <v-text-field
+                                                        readonly
+                                                        label="Query string"
+                                                        v-model="message.bottle.query_string"
+                                                    ></v-text-field>
+                                                    <v-text-field
+                                                        readonly
+                                                        label="Path parameters"
+                                                        v-model="message.bottle.query_string"
                                                     ></v-text-field>
                                                 </v-col>
-                                                <v-col cols="4">
-                                                    <v-text-field
-                                                        readonly
-                                                        label="HTTP Version"
-                                                        v-model="message.bottle.http_version"
-                                                    ></v-text-field>
-                                                </v-col>
-                                                <v-col cols="4">
-                                                    <v-text-field
-                                                        readonly
-                                                        label="Method"
-                                                        v-model="message.bottle.method"
-                                                    ></v-text-field>
+                                                <v-col lg="6">
+                                                    <h3>Request headers</h3>
+                                                    <v-simple-table>
+                                                        <template v-slot:default>
+                                                        <thead>
+                                                            <tr>
+                                                            <th class="text-left">
+                                                                Name
+                                                            </th>
+                                                            <th class="text-left">
+                                                                Value
+                                                            </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr
+                                                            v-for="header in message.bottle.headers"
+                                                            :key="header.name"
+                                                            >
+                                                            <td>[[header.name]]</td>
+                                                            <td>[[header.value]]</td>
+                                                            </tr>
+                                                        </tbody>
+                                                        </template>
+                                                    </v-simple-table>
                                                 </v-col>
                                             </v-row>
-                                        
-                                            <h3>Request parameters</h3>
-                                            <v-text-field
-                                                readonly
-                                                label="Path"
-                                                v-model="message.bottle.path"
-                                            ></v-text-field>
-                                            <v-text-field
-                                                readonly
-                                                label="Query string"
-                                                v-model="message.bottle.query_string"
-                                            ></v-text-field>
-                                            <v-text-field
-                                                readonly
-                                                label="Path parameters"
-                                                v-model="message.bottle.query_string"
-                                            ></v-text-field>
-                                            <h3>Request headers</h3>
-                                            <v-simple-table>
-                                                <template v-slot:default>
-                                                  <thead>
-                                                    <tr>
-                                                      <th class="text-left">
-                                                        Name
-                                                      </th>
-                                                      <th class="text-left">
-                                                        Value
-                                                      </th>
-                                                    </tr>
-                                                  </thead>
-                                                  <tbody>
-                                                    <tr
-                                                      v-for="header in message.bottle.headers"
-                                                      :key="header.name"
-                                                    >
-                                                      <td>[[header.name]]</td>
-                                                      <td>[[header.value]]</td>
-                                                    </tr>
-                                                  </tbody>
-                                                </template>
-                                              </v-simple-table>
+                                        </v-expansion-panel-content>
                                     </v-expansion-panel>
                                 </v-expansion-panels>
-                            </v-card-text>
-                            <v-card-text v-else>
-                                No bottle received yet...
-                            </v-card-text>
-                            <v-card-actions>
-                                <v-btn @click="sendBottle">Send a test bottle</v-btn>
-                                <v-btn link target="_blank" :href="`/bottle/${bottle_id}`">Try it yourself</v-btn>
-                            </v-card-actions>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-container>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-tab-item>
+            </v-tabs-items>
             <v-container v-else>
                 <v-row>
                     <v-col cols="4" offset="4">
@@ -251,10 +315,6 @@
         </v-main>
     </v-app>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script>
     new Vue({
         el: '#app',
@@ -264,9 +324,11 @@
         delimiters: ['[[',']]'],
         data: function(){
             return {
+                tab: null,
                 connection: null,
                 bottle_id: '{{ bottle_id }}',
                 bottle: {},
+                updateRequired: false,
                 messages: [],
                 snackbar: false,
                 snackbarColor: "error",
@@ -316,6 +378,12 @@
         watch: {
             editDialog(val) {
                 val || this.closeEditHeaders()
+            },
+            bottle: {
+                handler(oldBottle, newBottle){
+                    this.updateRequired = true
+                },
+                deep: true
             }
         },
         methods: {
@@ -353,6 +421,7 @@
                 return axios.post("/set/{{bottle_id}}", this.bottle).then(response => {
                     if (this.connection) {
                         this.connection.send(JSON.stringify({eventType: 'update'}))
+                        this.updateRequired = false
                     }
                 })
                 .catch(this.error)
@@ -361,6 +430,7 @@
                 return axios.post("/new/{{bottle_id}}", { bottle_id: '{{bottle_id}}'}).then(response => {
                     this.getBottle()
                     this.success('A new bottle was created.')
+                    this.updateRequired = false
                 })
                 .catch(this.error)
             },
